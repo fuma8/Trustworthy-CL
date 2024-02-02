@@ -1,7 +1,25 @@
 import torch
 import torch.nn.functional as F
 from helpers import get_device
+from torch import nn
 
+class KnowledgeDistillationLoss(nn.Module):
+    def __init__(self, temperature=3):
+        super(KnowledgeDistillationLoss, self).__init__()
+        self.temperature = temperature
+        self.ce_loss = nn.CrossEntropyLoss()
+
+    def forward(self, outputs, targets, teacher_outputs):
+        soft_target_loss = nn.functional.kl_div(
+            nn.functional.log_softmax(outputs / self.temperature, dim=1),
+            nn.functional.softmax(teacher_outputs / self.temperature, dim=1),
+            reduction='batchmean'
+        ) * (self.temperature ** 2)
+
+        hard_target_loss = self.ce_loss(outputs, targets)
+
+        total_loss = soft_target_loss + hard_target_loss
+        return total_loss
 
 def relu_evidence(y):
     return F.relu(y)
@@ -14,6 +32,44 @@ def exp_evidence(y):
 def softplus_evidence(y):
     return F.softplus(y)
 
+def proposed_kl_divergence(predicted_alpha, true_alpha, num_class, device=None):
+    if not device:
+        device = get_device()
+    predicted_sum_alpha = torch.sum(predicted_alpha, dim=1, keepdim=True)
+    true_sum_alpha = torch.sum(true_alpha, dim=1, keepdim=True)
+    first_term = (
+        torch.lgamma(predicted_sum_alpha)
+        - torch.lgamma(predicted_alpha).sum(dim=1, keepdim=True)
+        + torch.lgamma(true_alpha).sum(dim=1, keepdim=True)
+        - torch.lgamma(true_alpha.sum(dim=1, keepdim=True))
+    )
+    second_term = (
+        (predicted_alpha - true_alpha)
+        .mul(torch.digamma(predicted_alpha) - torch.digamma(predicted_sum_alpha))
+        .sum(dim=1, keepdim=True)
+    )
+    kl = first_term + second_term
+    return kl
+
+def ce_loss(p, output, num_class, global_step, annealing_step, device):
+    # evidence = relu_evidence(output)
+    evidence = exp_evidence(output)
+    alpha = evidence + 1
+    S = torch.sum(alpha, dim=1, keepdim=True)
+    E = alpha - 1
+    label = F.one_hot(p, num_classes=num_class)
+    A = torch.sum(label * (torch.digamma(S) - torch.digamma(alpha)), dim=1, keepdim=True)
+    annealing_coef = min(1, global_step / annealing_step)
+    alp = E * (1 - label) + 1
+    enhanced_evidence = torch.zeros(output.shape[0], num_class).to(device)
+    evidence_sum = torch.sum(evidence)
+    evidence_sum /= output.shape[0]
+    for i in range(output.shape[0]):
+        # evidence_sum = torch.sum(evidence[i])
+        enhanced_evidence[i][torch.nonzero(label[i]).item()] = evidence_sum
+    #B = annealing_coef * kl_divergence(alp, num_class, device)
+    B = 0.01 * annealing_coef * proposed_kl_divergence(alpha, enhanced_evidence+1, num_class, device)
+    return torch.mean((A+B))
 
 def kl_divergence(alpha, num_classes, device=None):
     if not device:

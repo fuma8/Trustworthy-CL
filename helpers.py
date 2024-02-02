@@ -1,9 +1,11 @@
 import torch
 import scipy.ndimage as nd
-
+import os
 
 def get_device():
     use_cuda = torch.cuda.is_available()
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
     device = torch.device("cuda:0" if use_cuda else "cpu")
     return device
 
