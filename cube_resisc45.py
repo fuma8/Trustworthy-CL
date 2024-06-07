@@ -144,7 +144,6 @@ def train(epoch, M, PhiR, PhiG, PhiB):
             phi_consG = torch.mm(PhiG, PhiG.t()).to(device)
             phi_consB = torch.mm(PhiB, PhiB.t()).to(device)
             loss = ce_loss(targets_, outputs, num_class, epoch, 10, device)
-            #loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
             train_loss += loss.item()
             _, predicted = outputs.max(1)
             total += targets_.size(0)
