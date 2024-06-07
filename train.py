@@ -45,6 +45,8 @@ def train_model(
 
             running_loss = 0.0
             running_corrects = 0.0
+            running_belief = 0.0
+            running_uncertainty = 0.0
             correct = 0
 
             # Iterate over data.
@@ -52,7 +54,6 @@ def train_model(
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
@@ -65,24 +66,31 @@ def train_model(
                         y = y.to(device)
                         outputs = model(inputs)
                         _, preds = torch.max(outputs, 1)
-                        loss = criterion(
-                            outputs, y.float(), epoch, num_classes, 10, device
-                        )
-
-                        match = torch.reshape(torch.eq(preds, labels).float(), (-1, 1))
-                        acc = torch.mean(match)
                         evidence = relu_evidence(outputs)
                         alpha = evidence + 1
-                        u = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+                        loss = criterion(outputs, y.float(), epoch, num_classes, 10, device)
+                        uncertainty = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+                        total_belief = torch.sum(evidence / torch.sum(alpha, dim=1, keepdim=True), dim=1, keepdim=True)
+                        
+                        # _, preds = torch.max(outputs, 1)
+                        # loss = criterion(
+                        #     outputs, y.float(), epoch, num_classes, 10, device
+                        # )
 
-                        total_evidence = torch.sum(evidence, 1, keepdim=True)
-                        mean_evidence = torch.mean(total_evidence)
-                        mean_evidence_succ = torch.sum(
-                            torch.sum(evidence, 1, keepdim=True) * match
-                        ) / torch.sum(match + 1e-20)
-                        mean_evidence_fail = torch.sum(
-                            torch.sum(evidence, 1, keepdim=True) * (1 - match)
-                        ) / (torch.sum(torch.abs(1 - match)) + 1e-20)
+                        # match = torch.reshape(torch.eq(preds, labels).float(), (-1, 1))
+                        # acc = torch.mean(match)
+                        # evidence = relu_evidence(outputs)
+                        # alpha = evidence + 1
+                        # u = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+
+                        # total_evidence = torch.sum(evidence, 1, keepdim=True)
+                        # mean_evidence = torch.mean(total_evidence)
+                        # mean_evidence_succ = torch.sum(
+                        #     torch.sum(evidence, 1, keepdim=True) * match
+                        # ) / torch.sum(match + 1e-20)
+                        # mean_evidence_fail = torch.sum(
+                        #     torch.sum(evidence, 1, keepdim=True) * (1 - match)
+                        # ) / (torch.sum(torch.abs(1 - match)) + 1e-20)
 
                     else:
                         outputs = model(inputs)
@@ -96,7 +104,9 @@ def train_model(
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
-
+                running_belief += total_belief
+                running_uncertainty += uncertainty
+                print(running_belief, running_belief, running_belief+running_uncertainty)
             if scheduler is not None:
                 if phase == "train":
                     scheduler.step()
@@ -116,7 +126,6 @@ def train_model(
                     phase.capitalize(), epoch_loss, epoch_acc
                 )
             )
-
             # deep copy the model
             if phase == "val" and epoch_acc > best_acc:
                 best_acc = epoch_acc

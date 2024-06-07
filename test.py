@@ -9,18 +9,14 @@ from PIL import Image
 from losses import relu_evidence
 from helpers import rotate_img, one_hot_embedding, get_device
 
-
-def test_single_image(model, img_path, uncertainty=False, device=None):
-    img = Image.open(img_path).convert("L")
+def test_single_image(model, img_tensor, label, uncertainty=False, device=None):
     if not device:
         device = get_device()
     num_classes = 10
-    trans = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
-    img_tensor = trans(img)
+    img_tensor = img_tensor[0]
     img_tensor.unsqueeze_(0)
-    img_variable = Variable(img_tensor)
-    img_variable = img_variable.to(device)
-
+    img_variable = img_tensor.to(device)
+    print(img_variable.shape)
     if uncertainty:
         output = model(img_variable)
         evidence = relu_evidence(output)
@@ -31,12 +27,11 @@ def test_single_image(model, img_path, uncertainty=False, device=None):
         output = output.flatten()
         prob = prob.flatten()
         preds = preds.flatten()
-        print("Predict:", preds[0])
+        print("Predict:", label[0])
         print("Probs:", prob)
         print("Uncertainty:", uncertainty)
-
+        return uncertainty
     else:
-
         output = model(img_variable)
         _, preds = torch.max(output, 1)
         prob = F.softmax(output, dim=1)
@@ -46,26 +41,63 @@ def test_single_image(model, img_path, uncertainty=False, device=None):
         print("Predict:", preds[0])
         print("Probs:", prob)
 
-    labels = np.arange(10)
-    fig = plt.figure(figsize=[6.2, 5])
-    fig, axs = plt.subplots(1, 2, gridspec_kw={"width_ratios": [1, 3]})
 
-    plt.title("Classified as: {}, Uncertainty: {}".format(preds[0], uncertainty.item()))
+# def test_single_image(model, img_path, uncertainty=False, device=None):
+#     img = Image.open(img_path).convert("RGB")#.convert("L")
+#     if not device:
+#         device = get_device()
+#     num_classes = 10
+#     trans = transforms.Compose([transforms.Resize((32, 32)), transforms.ToTensor()])
+#     img_tensor = trans(img)
+#     img_tensor.unsqueeze_(0)
+#     img_variable = Variable(img_tensor)
+#     img_variable = img_variable.to(device)
 
-    axs[0].set_title("One")
-    axs[0].imshow(img, cmap="gray")
-    axs[0].axis("off")
+#     if uncertainty:
+#         output = model(img_variable)
+#         evidence = relu_evidence(output)
+#         alpha = evidence + 1
+#         uncertainty = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+#         _, preds = torch.max(output, 1)
+#         prob = alpha / torch.sum(alpha, dim=1, keepdim=True)
+#         output = output.flatten()
+#         prob = prob.flatten()
+#         preds = preds.flatten()
+#         print("Predict:", preds[0])
+#         print("Probs:", prob)
+#         print("Uncertainty:", uncertainty)
 
-    axs[1].bar(labels, prob.cpu().detach().numpy(), width=0.5)
-    axs[1].set_xlim([0, 9])
-    axs[1].set_ylim([0, 1])
-    axs[1].set_xticks(np.arange(10))
-    axs[1].set_xlabel("Classes")
-    axs[1].set_ylabel("Classification Probability")
+#     else:
 
-    fig.tight_layout()
+#         output = model(img_variable)
+#         _, preds = torch.max(output, 1)
+#         prob = F.softmax(output, dim=1)
+#         output = output.flatten()
+#         prob = prob.flatten()
+#         preds = preds.flatten()
+#         print("Predict:", preds[0])
+#         print("Probs:", prob)
 
-    plt.savefig("./results/{}".format(os.path.basename(img_path)))
+#     labels = np.arange(10)
+#     fig = plt.figure(figsize=[6.2, 5])
+#     fig, axs = plt.subplots(1, 2, gridspec_kw={"width_ratios": [1, 3]})
+
+#     # plt.title("Classified as: {}, Uncertainty: {}".format(preds[0], uncertainty.item()))
+
+#     axs[0].set_title("One")
+#     axs[0].imshow(img, cmap="gray")
+#     axs[0].axis("off")
+
+#     axs[1].bar(labels, prob.cpu().detach().numpy(), width=0.5)
+#     axs[1].set_xlim([0, 9])
+#     axs[1].set_ylim([0, 1])
+#     axs[1].set_xticks(np.arange(10))
+#     axs[1].set_xlabel("Classes")
+#     axs[1].set_ylabel("Classification Probability")
+
+#     fig.tight_layout()
+
+#     plt.savefig("./results/{}".format(os.path.basename(img_path)))
 
 
 def rotating_image_classification(

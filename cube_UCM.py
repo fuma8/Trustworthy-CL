@@ -26,12 +26,12 @@ from pytorch_pretrained_vit import ViT
 from torchinfo import summary
 from torcheval.metrics.functional import multiclass_auroc
 
-rows = 8 #サンプリングマトリックスの行数
-cols = 8 #サンプリングマトリックスの列数
+rows = 4 #サンプリングマトリックスの行数
+cols = 4 #サンプリングマトリックスの列数
 M =  rows*cols#生成されるビデオのフレーム数
 blk_size = cols
 sampling_rate = M // (rows*cols)
-cube_size = 384 // cols
+cube_size = 256 // cols
 # 平均と標準偏差を指定
 mean = 0.0
 std_dev = 1.0
@@ -47,7 +47,7 @@ PhiWeightR = PhiR.unsqueeze(1).to(device)
 PhiWeightB = PhiB.unsqueeze(1).to(device)
 PhiWeightG = PhiG.unsqueeze(1).to(device)
 transform = transforms.Compose([
-    transforms.Resize((384,384)),
+    transforms.Resize((256,256)),
     transforms.ToTensor(),
 ])
 
@@ -103,6 +103,7 @@ def train(epoch, M, PhiR, PhiG, PhiB):
     sampling_rate = M // (rows * cols)
     I = torch.eye(int(sampling_rate*rows*cols)).to(device)
     criterion = F.mse_loss
+    original_ce = nn.CrossEntropyLoss()
     gamma1 = torch.Tensor([0.001]).to(device)
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs = inputs.to(device)
@@ -144,6 +145,8 @@ def train(epoch, M, PhiR, PhiG, PhiB):
             phi_consR = torch.mm(PhiR, PhiR.t()).to(device)
             phi_consG = torch.mm(PhiG, PhiG.t()).to(device)
             phi_consB = torch.mm(PhiB, PhiB.t()).to(device)
+            #loss = original_ce(outputs, targets_)
+            #loss = ce_loss(targets_, outputs, num_class, epoch, 10, device)
             loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
             train_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -181,6 +184,7 @@ def test(epoch, M, PhiR, PhiG, PhiB, flag):
     sampling_rate = M // (rows * cols)
     I = torch.eye(M).to(device)
     criterion = F.mse_loss
+    original_ce = nn.CrossEntropyLoss()
     gamma1 = torch.Tensor([0.001]).to(device)
     PhiR = PhiR[:M, :]
     PhiB = PhiB[:M, :]
@@ -214,6 +218,8 @@ def test(epoch, M, PhiR, PhiG, PhiB, flag):
                 phi_consR = torch.mm(PhiR, PhiR.t()).to(device)
                 phi_consG = torch.mm(PhiG, PhiG.t()).to(device)
                 phi_consB = torch.mm(PhiB, PhiB.t()).to(device)
+                #loss = original_ce(outputs, targets_)
+                #loss = ce_loss(targets_, outputs, num_class, epoch, 10, device)
                 loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
                 test_loss += loss.item()
                 _, predicted = outputs.max(1)

@@ -31,7 +31,7 @@ cols = 4 #サンプリングマトリックスの列数
 M =  rows*cols#生成されるビデオのフレーム数
 blk_size = cols
 sampling_rate = M // (rows*cols)
-cube_size = 384 // cols
+cube_size = 256 // cols
 # 平均と標準偏差を指定
 mean = 0.0
 std_dev = 1.0
@@ -47,7 +47,7 @@ PhiWeightR = PhiR.unsqueeze(1).to(device)
 PhiWeightB = PhiB.unsqueeze(1).to(device)
 PhiWeightG = PhiG.unsqueeze(1).to(device)
 transform = transforms.Compose([
-    transforms.Resize((384, 384)),
+    transforms.Resize((256, 256)),
     transforms.ToTensor(),
 ])
 
@@ -70,7 +70,7 @@ total_epoch = 100
 num_classes = 45
 input_channel = 3
 # model = ResNet18(num_classes, input_channels = input_channel)
-model = ViT('B_32_imagenet1k', pretrained=True, in_channels = input_channel, image_size = cube_size, num_classes = num_classes)
+model = ViT('B_16_imagenet1k', pretrained=True, in_channels = input_channel, image_size = cube_size, num_classes = num_classes)
 # summary(model=model, input_size=(batch_size*M, 3, cube_size, cube_size))
 # input()
 if torch.cuda.device_count() > 1:
@@ -81,7 +81,6 @@ optimizer = optim.SGD(model.parameters(), lr = 1e-2,
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 transform_cube_train = transforms.Compose([
         transforms.RandomResizedCrop(cube_size),
-        transforms.RandomHorizontalFlip(),
         transforms.RandomHorizontalFlip(),
     ])
 transform_cube_val = transforms.Compose([
@@ -144,7 +143,8 @@ def train(epoch, M, PhiR, PhiG, PhiB):
             phi_consR = torch.mm(PhiR, PhiR.t()).to(device)
             phi_consG = torch.mm(PhiG, PhiG.t()).to(device)
             phi_consB = torch.mm(PhiB, PhiB.t()).to(device)
-            loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
+            loss = ce_loss(targets_, outputs, num_class, epoch, 10, device)
+            #loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
             train_loss += loss.item()
             _, predicted = outputs.max(1)
             total += targets_.size(0)
@@ -214,7 +214,8 @@ def test(epoch, M, PhiR, PhiG, PhiB, flag):
                 phi_consR = torch.mm(PhiR, PhiR.t()).to(device)
                 phi_consG = torch.mm(PhiG, PhiG.t()).to(device)
                 phi_consB = torch.mm(PhiB, PhiB.t()).to(device)
-                loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
+                loss = ce_loss(targets_, outputs, num_class, epoch, 10, device)
+                #loss = ce_loss(targets_, outputs, num_class, epoch, 10, device) + torch.mul(criterion(phi_consR, I), gamma1) + torch.mul(criterion(phi_consG, I), gamma1) + torch.mul(criterion(phi_consB, I), gamma1)
                 test_loss += loss.item()
                 _, predicted = outputs.max(1)
                 total += targets_.size(0)
