@@ -1,0 +1,16 @@
+SR 0.0625: Accuracy 0.9566 Mean_Uncertainty 0.0092 AUC 88.8937
+SR 0.125: Accuracy 0.9547 Mean_Uncertainty 0.0091 AUC 88.8920
+SR 0.1875: Accuracy 0.9555 Mean_Uncertainty 0.0092 AUC 88.8954
+SR 0.25: Accuracy 0.9559 Mean_Uncertainty 0.0092 AUC 88.8947
+SR 0.3125: Accuracy 0.9561 Mean_Uncertainty 0.0092 AUC 88.8938
+SR 0.375: Accuracy 0.9557 Mean_Uncertainty 0.0091 AUC 88.8955
+SR 0.4375: Accuracy 0.9551 Mean_Uncertainty 0.0092 AUC 88.8953
+SR 0.5: Accuracy 0.9560 Mean_Uncertainty 0.0092 AUC 88.8942
+SR 0.5625: Accuracy 0.9558 Mean_Uncertainty 0.0091 AUC 88.8950
+SR 0.625: Accuracy 0.9554 Mean_Uncertainty 0.0091 AUC 88.8955
+SR 0.6875: Accuracy 0.9551 Mean_Uncertainty 0.0092 AUC 88.8946
+SR 0.75: Accuracy 0.9554 Mean_Uncertainty 0.0092 AUC 88.8947
+SR 0.8125: Accuracy 0.9555 Mean_Uncertainty 0.0092 AUC 88.8955
+SR 0.875: Accuracy 0.9550 Mean_Uncertainty 0.0092 AUC 88.8951
+SR 0.9375: Accuracy 0.9555 Mean_Uncertainty 0.0092 AUC 88.8950
+SR 1.0: Accuracy 0.9553 Mean_Uncertainty 0.0092 AUC 88.8948
